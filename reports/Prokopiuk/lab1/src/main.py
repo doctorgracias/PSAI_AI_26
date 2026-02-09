@@ -66,7 +66,7 @@ class Perceptron:
 
         return mse_history
 
-X_train = np.array([[1, 1.5], [0.5, 0.5], [0.8, -1], [0.7, 0.7]])
+X_train = np.array([[1, 1.0], [0.5, -0.4], [-0.8, -1], [0, 1]])
 Y_targets = np.array([-1, 1, 1, 1])
 
 plt.figure(figsize=(12, 5))
@@ -75,7 +75,7 @@ for lr in [0.01, 0.1, 0.5]:
     test_p = Perceptron(input_size=2, learning_rate=lr)
     test_p.set_X(X_train)
     test_p.set_target(Y_targets)
-    history = test_p.train(epochs=500)
+    history = test_p.train(epochs=5000)
     plt.plot(history, label=f'LR = {lr}')
 
 plt.title("Dependence MSE on epoch")
@@ -93,7 +93,7 @@ def plot_current_state(user_point=None, user_class=None):
     plt.subplot(1, 2, 1)
     plt.cla()
 
-    xx, yy = np.meshgrid(np.linspace(-0.5, 1.5, 100), np.linspace(-1.5, 1.5, 100))
+    xx, yy = np.meshgrid(np.linspace(-1.5, 1.5, 100), np.linspace(-1.5, 1.5, 100))
     grid_points = np.c_[np.ones(xx.ravel().shape) * -1, xx.ravel(), yy.ravel()]
     Z = p.forward(grid_points).reshape(xx.shape)
     
@@ -104,8 +104,11 @@ def plot_current_state(user_point=None, user_class=None):
     if user_point is not None:
         plt.scatter(user_point[0], user_point[1], color='yellow', marker='*', s=200, edgecolors='black', label=f'Input: class {user_class:.2f}')
     
+    plt.xlim([-1.5, 1.5])
+    plt.ylim([-1.5, 1.5])
+    plt.grid(True, linestyle='--', alpha=0.5)
+
     plt.title("Classification")
-    plt.legend(loc='lower right')
     plt.pause(0.1)
 
 plot_current_state()
