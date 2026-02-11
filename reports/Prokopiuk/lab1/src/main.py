@@ -1,10 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+
 class Perceptron:
     def __init__(self, input_size=0, learning_rate=0.1):
         self.X = np.array([])
-        self.w = np.random.uniform(-1.0, 1.0, input_size + 1)# threshold w[0]
+        self.w = np.random.uniform(0, 1.0, input_size + 1)
+        #self.threshold = np.random.uniform(0, 1.0)
         self.learning_rate = learning_rate
         self.target = np.array([])
     
@@ -20,9 +22,6 @@ class Perceptron:
         self.X = X
         self.X = np.insert(self.X, 0, -1, axis=1)
 
-    def set_w(self, w: np.array) -> None:
-        self.w = w          # the first one is a threshold
-
     def set_target(self, target: np.array) -> None:
         if self.X.ndim != 2:
             print("X not setted!")
@@ -33,45 +32,76 @@ class Perceptron:
             return
         
         self.target = target
+
+    def get_wsum(self, X: np.array) -> np.array:
+        return np.dot(X, self.w)
     
     def activate(self, arr_wsum: np.array) -> np.array:
-        return 2 / (1 + np.exp(-arr_wsum)) - 1
+        return np.where(arr_wsum > 0, 1, 0)  #2 / (1 + np.exp(-arr_wsum)) - 1
     
-    def der_activate(self, y_pred: np.array) -> np.array:
-        return 0.5 * (1 - y_pred**2)
+    # def der_activate(self, y_pred: np.array) -> np.array:
+    #     return 0.5 * (1 - y_pred**2)
     
-    def forward(self, X_input=None) -> np.array:
+    def prediction(self, X_input=None) -> np.array:
         X = self.X if X_input is None else X_input
         
         if X.size == 0:
             print("Input X vector not set!")
             return None
         
-        wsum = np.dot(X, self.w)
+        wsum = self.get_wsum(X)
         y = self.activate(wsum)
 
         return y
     
-    def train(self, epochs = 1000) -> list:
+    def delta(self, error: np.array) -> None:
+        self.w = self.w - self.learning_rate * np.dot(error, self.X)
+
+    def mse(self, error: np.array) -> np.array:
+        return np.mean(0.5 * error ** 2)
+
+    def train(self, epochs=500) -> np.array:   # поезд
         mse_history = []
+
         for epoch in range(epochs):
-            y_pred = self.forward()
+            s = self.get_wsum(self.X)
 
-            error = y_pred - self.target # gamma
-
-            mse = np.mean(error**2)
+            error = s - self.target
+            mse = self.mse(error)
             mse_history.append(mse)
 
-            self.w = self.w - np.dot(self.learning_rate * error * self.der_activate(y_pred), self.X)
+            self.delta(error)
 
         return mse_history
 
-X_train = np.array([[1, 1.0], [0.5, -0.4], [-0.8, -1], [0, 1]])
-Y_targets = np.array([-1, 1, 1, 1])
+        
+    # def chk_stop(self, mse: np.array, accuracy: float) -> bool:
+    #     if mse > accuracy:
+    #         return False
+    #     elif 
+    
+    # def train(self, epochs = 1000) -> list:
+    #     mse_history = []
+    #     for epoch in range(epochs):
+    #         y_pred = self.forward()
+
+    #         error = y_pred - self.target # gamma
+
+    #         mse = np.mean(error**2)
+    #         mse_history.append(mse)
+
+    #         self.w = self.w - np.dot(self.learning_rate * error * self.der_activate(y_pred), self.X)
+
+    #     return mse_history
+
+X_train = np.array([[6, 2], [-6, 2], [6, -2], [-6, -2]])
+Y_targets = np.array([-1, -1, 1, -1])
 
 plt.figure(figsize=(12, 5))
+
+# --- График MSE ---
 plt.subplot(1, 2, 2)
-for lr in [0.01, 0.1, 0.5]:
+for lr in [0.0001, 0.001, 0.01]:
     test_p = Perceptron(input_size=2, learning_rate=lr)
     test_p.set_X(X_train)
     test_p.set_target(Y_targets)
@@ -84,53 +114,64 @@ plt.ylabel("MSE")
 plt.legend()
 plt.grid(True)
 
-p = Perceptron(input_size=2, learning_rate=0.1)
+# --- Основной объект для классификации ---
+p = Perceptron(input_size=2, learning_rate=0.001) 
 p.set_X(X_train)
 p.set_target(Y_targets)
 p.train(epochs=1000)
 
 def plot_current_state(user_point=None, user_class=None):
     plt.subplot(1, 2, 1)
-    plt.cla()
-
-    xx, yy = np.meshgrid(np.linspace(-1.5, 1.5, 100), np.linspace(-1.5, 1.5, 100))
-    grid_points = np.c_[np.ones(xx.ravel().shape) * -1, xx.ravel(), yy.ravel()]
-    Z = p.forward(grid_points).reshape(xx.shape)
     
-    plt.contourf(xx, yy, Z, levels=0, colors=["#ef0a0a", "#0000ff"], alpha=0.5)
-    plt.contour(xx, yy, Z, levels=[0], colors='r')
-    plt.scatter(X_train[:,0], X_train[:,1], c=Y_targets, cmap='RdBu', edgecolors='k', label='training sample')
+    xx, yy = np.meshgrid(np.linspace(-10, 10, 100), np.linspace(-10, 10, 100))
+    grid_points = np.c_[np.ones(xx.ravel().shape) * -1, xx.ravel(), yy.ravel()]
+    
+    Z_linear = p.get_wsum(grid_points).reshape(xx.shape)
+    Z_class = p.prediction(grid_points).reshape(xx.shape)
+    
+    # Исправленные индексы: X_train[:, 0] и X_train[:, 1]
+    plt.contourf(xx, yy, Z_class, levels=[-0.1, 0.5, 1.1], colors=["#ffcccc", "#ccccff"], alpha=0.8)
+    plt.contour(xx, yy, Z_linear, levels=[0], colors='red', linewidths=2)
+    
+    # ВАЖНО: Тут были индексы [:, 1] и [:, 2], заменили на [:, 0] и [:, 1]
+    plt.scatter(X_train[:, 0], X_train[:, 1], c=Y_targets, cmap='RdBu', edgecolors='k', s=100, label='Training samples')
     
     if user_point is not None:
-        plt.scatter(user_point[0], user_point[1], color='yellow', marker='*', s=200, edgecolors='black', label=f'Input: class {user_class:.2f}')
+        plt.scatter(user_point[0], user_point[1], color='yellow', marker='*', s=250, edgecolors='black', label=f'Pred: {user_class}')
     
-    plt.xlim([-1.5, 1.5])
-    plt.ylim([-1.5, 1.5])
+    plt.xlim([-10, 10])
+    plt.ylim([-10, 10])
     plt.grid(True, linestyle='--', alpha=0.5)
-    plt.legend(loc='lower right')
-    plt.title("Classification")
-    plt.pause(0.1)
+    plt.legend(loc='upper left')
+    plt.title("Perceptron Decision Boundary (S=0)")
 
+# Первичная отрисовка
 plot_current_state()
 plt.show(block=False)
 
-print("Input coordinates of point (x1, x2) from [-1.0, 0.1]")
+print("\nInput coordinates (x1, x2) from -7 to 7")
 try:
     while True:
-        line = input("Input x1 x2 (through space or type'exit' for exit): ")
+        line = input("Input x1 x2 (or 'exit'): ")
         if line.lower() == 'exit': break
         
-        coords = list(map(float, line.split()))
-
+        parts = line.split()
+        if len(parts) != 2: continue
+        
+        coords = [float(p) for p in parts]
         user_x = np.array([[-1, coords[0], coords[1]]])
-        prediction = p.forward(user_x)[0]
         
-        print(f"Result: {prediction:.4f} (Class {'1' if prediction > 0 else '-1'})")
+        # Получаем предсказание (0 или 1)
+        pred = p.prediction(user_x)[0]
         
-        plt.subplot(1, 2, 1) 
-        plot_current_state(coords, prediction)
+        print(f"Result: {pred} (Class {'1' if pred > 0 else '0'})")
+        
+        plt.subplot(1, 2, 1)
+        plt.cla() # Очищаем только левый график для обновления
+        plot_current_state(coords, pred)
         plt.draw()
+        plt.pause(0.1)
 except ValueError:
-    print("Exit...")
+    print("Invalid input.")
 
 plt.show()
