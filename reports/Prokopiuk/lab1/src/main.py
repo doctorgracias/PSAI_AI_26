@@ -99,7 +99,6 @@ Y_targets = np.array([-1, -1, 1, -1])
 
 plt.figure(figsize=(12, 5))
 
-# --- График MSE ---
 plt.subplot(1, 2, 2)
 for lr in [0.0001, 0.001, 0.01]:
     test_p = Perceptron(input_size=2, learning_rate=lr)
@@ -114,7 +113,6 @@ plt.ylabel("MSE")
 plt.legend()
 plt.grid(True)
 
-# --- Основной объект для классификации ---
 p = Perceptron(input_size=2, learning_rate=0.001) 
 p.set_X(X_train)
 p.set_target(Y_targets)
@@ -128,12 +126,10 @@ def plot_current_state(user_point=None, user_class=None):
     
     Z_linear = p.get_wsum(grid_points).reshape(xx.shape)
     Z_class = p.prediction(grid_points).reshape(xx.shape)
-    
-    # Исправленные индексы: X_train[:, 0] и X_train[:, 1]
+
     plt.contourf(xx, yy, Z_class, levels=[-0.1, 0.5, 1.1], colors=["#ffcccc", "#ccccff"], alpha=0.8)
     plt.contour(xx, yy, Z_linear, levels=[0], colors='red', linewidths=2)
-    
-    # ВАЖНО: Тут были индексы [:, 1] и [:, 2], заменили на [:, 0] и [:, 1]
+
     plt.scatter(X_train[:, 0], X_train[:, 1], c=Y_targets, cmap='RdBu', edgecolors='k', s=100, label='Training samples')
     
     if user_point is not None:
@@ -145,7 +141,6 @@ def plot_current_state(user_point=None, user_class=None):
     plt.legend(loc='upper left')
     plt.title("Perceptron Decision Boundary (S=0)")
 
-# Первичная отрисовка
 plot_current_state()
 plt.show(block=False)
 
@@ -160,14 +155,13 @@ try:
         
         coords = [float(p) for p in parts]
         user_x = np.array([[-1, coords[0], coords[1]]])
-        
-        # Получаем предсказание (0 или 1)
+
         pred = p.prediction(user_x)[0]
         
         print(f"Result: {pred} (Class {'1' if pred > 0 else '0'})")
         
         plt.subplot(1, 2, 1)
-        plt.cla() # Очищаем только левый график для обновления
+        plt.cla()
         plot_current_state(coords, pred)
         plt.draw()
         plt.pause(0.1)
