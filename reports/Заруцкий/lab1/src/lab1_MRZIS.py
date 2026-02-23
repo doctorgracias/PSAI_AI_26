@@ -8,106 +8,111 @@ def load_custom_dataset():
         [4, -1, 1],
         [-4, -1, 0]
     ]
-    X = np.array([[p[0], p[1]] for p in data])
-    y = np.array([p[2] for p in data])
+    X = np.array([[p[0], p[1]] for p in data], dtype=float)
+    y = np.array([p[2] for p in data], dtype=int)
+    y = np.where(y == 0, -1, 1)
     return X, y
 
-def step_function(x):
-    return 1 if x >= 0 else 0
+def step_sign(x):
+    return 1 if x >= 0 else -1
 
-class Perceptron:
-    def __init__(self, input_size, learning_rate=0.1):
-        self.weights = np.random.randn(input_size) * 0.1
-        self.bias = np.random.randn() * 0.1
-        self.learning_rate = learning_rate
+class ADALINE:
+    def __init__(self, input_size, learning_rate=0.01):
+        self.w = np.zeros(input_size, dtype=float)
+        self.b = 0.0
+        self.lr = learning_rate
         self.mse_history = []
 
+    def predict_raw(self, x):
+        return np.dot(self.w, x) + self.b
+
     def predict(self, x):
-        z = np.dot(x, self.weights) + self.bias
-        return step_function(z)
+        return step_sign(self.predict_raw(x))
 
-    def fit(self, X, y, epochs=20):
-        n_samples = X.shape[0]
-        print("Старт обучения")
-        print(f"Начальные веса: {np.round(self.weights, 3)}, bias={self.bias:.3f}")
-
+    def fit_adaline(self, X, y, epochs=50, shuffle=True):
+        n = X.shape[0]
         for epoch in range(epochs):
-            total_error = 0
-            for i in range(n_samples):
-                z = np.dot(X[i], self.weights) + self.bias
-                prediction = step_function(z)
-                error = y[i] - prediction
-                total_error += error ** 2
-                self.weights += self.learning_rate * error * X[i]
-                self.bias += self.learning_rate * error
-            mse = total_error / n_samples
+            if shuffle:
+                idx = np.random.permutation(n)
+                X_epoch = X[idx]
+                y_epoch = y[idx]
+            else:
+                X_epoch = X
+                y_epoch = y
+
+            mse = 0.0
+            for xi, yi in zip(X_epoch, y_epoch):
+                raw = self.predict_raw(xi)
+                error = yi - raw
+                self.w += self.lr * error * xi
+                self.b += self.lr * error
+                mse += error**2
+
+            mse /= n
             self.mse_history.append(mse)
+            print(f"Эпоха {epoch+1:2d}: MSE = {mse:.4f}")
 
-        print("Обучение завершено")
+    def decision_boundary(self, x_vals):
+        if abs(self.w[1]) < 1e-12:
+            return np.full_like(x_vals, np.nan)
+        return (-(self.w[0] * x_vals + self.b) / self.w[1])
 
-    def decision_boundary(self, x):
-        if abs(self.weights[1]) < 1e-10:
-            return np.full_like(x, np.nan)
-        return (-self.weights[0] * x - self.bias) / self.weights[1]
+def learning_rate_study(X, y, rates, epochs=30):
+    results = {}
+    for lr in rates:
+        model = ADALINE(input_size=2, learning_rate=lr)
+        model.fit_adaline(X, y, epochs=epochs, shuffle=True)
+        results[lr] = model.mse_history
+    return results
 
-def visualize_results(X, y, perceptron, new_point=None):
-    plt.figure(figsize=(12, 5))
+def visualize(X, y, model, new_point=None):
+    plt.figure(figsize=(10,5))
 
-    plt.subplot(1, 2, 1)
-    epochs = range(1, len(perceptron.mse_history) + 1)
-    plt.plot(epochs, perceptron.mse_history, 'b-o')
+    plt.subplot(1,2,1)
+    plt.plot(range(1, len(model.mse_history)+1), model.mse_history, 'b-o')
     plt.xlabel("Эпоха")
     plt.ylabel("MSE")
-    plt.title("Снижение ошибки по эпохам")
+    plt.title("Ошибка по эпохам")
     plt.grid(True)
 
-    plt.subplot(1, 2, 2)
-    colors = ['red' if label == 0 else 'blue' for label in y]
-    plt.scatter(X[:, 0], X[:, 1], c=colors, edgecolors='k', s=150)
+    plt.subplot(1,2,2)
+    colors = ['red' if label == -1 else 'blue' for label in y]
+    plt.scatter(X[:,0], X[:,1], c=colors, edgecolors='k', s=120)
 
-    x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
-    x_vals = np.linspace(x_min, x_max, 100)
-    y_vals = perceptron.decision_boundary(x_vals)
-    plt.plot(x_vals, y_vals, 'g--', linewidth=2, label="Разделяющая линия")
+    x_min, x_max = X[:,0].min()-1, X[:,0].max()+1
+    x_vals = np.linspace(x_min, x_max, 200)
+    y_vals = model.decision_boundary(x_vals)
+    if not np.isnan(y_vals).all():
+        plt.plot(x_vals, y_vals, 'g--', linewidth=2, label='Разделяющая линия')
 
     if new_point is not None:
-        px, py = new_point
-        pred = perceptron.predict(new_point)
-        color = "blue" if pred == 1 else "red"
-        plt.scatter(px, py, c=color, s=200, marker="*", edgecolors='k')
-        plt.text(px, py, f"Класс: {pred}", fontsize=10)
+        p = np.array(new_point)
+        pred = model.predict(p)
+        color = 'blue' if pred == 1 else 'red'
+        plt.scatter(p[0], p[1], c=color, s=200, marker='*', edgecolors='k')
+        plt.text(p[0], p[1], f"Класс: {pred}", fontsize=10)
 
     plt.xlabel("x1")
     plt.ylabel("x2")
-    plt.title("Классификация и разделяющая линия")
-    plt.grid(True)
+    plt.title("Классификация")
     plt.legend()
+    plt.grid(True)
     plt.tight_layout()
     plt.show()
 
-def user_input_point():
-    print("\nВведите новую точку для классификации:")
-    x1 = float(input("x1 = "))
-    x2 = float(input("x2 = "))
-    return np.array([x1, x2])
-
 if __name__ == "__main__":
     X, y = load_custom_dataset()
-    perceptron = Perceptron(input_size=2, learning_rate=0.1)
-    perceptron.fit(X, y, epochs=20)
 
-    new_point = user_input_point()
-    visualize_results(X, y, perceptron, new_point=new_point)
+    rates = [0.001, 0.01, 0.05, 0.1]
+    lr_results = learning_rate_study(X, y, rates, epochs=40)
 
-    print("\nИтоговые параметры модели")
-    print(f"Веса: {np.round(perceptron.weights, 3)}")
-    print(f"Смещение: {perceptron.bias:.3f}")
-    print("\nMSE (первые 5 эпох):", [round(m, 3) for m in perceptron.mse_history[:5]], "...")
+    model = ADALINE(input_size=2, learning_rate=0.05)
+    model.fit_adaline(X, y, epochs=50)
 
-    correct = sum(perceptron.predict(X[i]) == y[i] for i in range(len(X)))
-    accuracy = correct / len(X) * 100
-    print(f"\nТочность на обучающей выборке: {accuracy:.0f}% ({correct}/{len(X)})")
+    new_point = np.array([0.0, 0.0])
+    visualize(X, y, model, new_point=new_point)
 
-    print("\nКлассификация новой точки")
-    print(f"Точка: x1 = {new_point[0]}, x2 = {new_point[1]}")
-    print(f"Предсказанный класс: {perceptron.predict(new_point)}")
+    preds = np.array([model.predict(x) for x in X])
+    acc = np.mean(preds == y) * 100
+    print(f"Веса: {model.w}, bias: {model.b:.4f}")
+    print(f"Точность на обучающей выборке: {acc:.1f}%")
