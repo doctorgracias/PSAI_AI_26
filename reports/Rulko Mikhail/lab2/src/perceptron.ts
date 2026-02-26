@@ -1,22 +1,24 @@
 class Perceptron {
-    constructor() {
-        this.w1 = 0;
-        this.w2 = 0;
-        this.bias = 0;
-        this.epsilon = 0.001; 
-    }
+    public w1: number = 0;
+    public w2: number = 0;
+    public bias: number = 0;
+    private readonly epsilon: number = 0.001;
 
-    getSum(x1, x2) {
+    public getSum(x1: number, x2: number): number {
         return x1 * this.w1 + x2 * this.w2 + this.bias;
     }
 
-    predict(x1, x2) {
+    public predict(x1: number, x2: number): number {
         return this.getSum(x1, x2) >= 0 ? 1 : -1;
     }
 
-    train(dataset, mode = 'fixed', alphaFixed = 0.01) {
+    public train(
+        dataset: DataPoint[], 
+        mode: TrainingMode = 'fixed', 
+        alphaFixed: number = 0.01
+    ): TrainingResult {
         let epochs = 0;
-        const history = [];
+        const history: number[] = [];
         const maxEpochs = 10;
 
         while (epochs < maxEpochs) {

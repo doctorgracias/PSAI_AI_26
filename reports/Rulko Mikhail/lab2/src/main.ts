@@ -1,4 +1,4 @@
-const dataset = [
+const dataset: DataPoint[] = [
     { x1: 1,  x2: 4,  label: -1 }, 
     { x1: -1, x2: 4,  label: -1 },
     { x1: 1,  x2: -4, label: -1 },

@@ -1,12 +1,18 @@
 class Visualizer {
-    constructor(mseId, decisionId) {
-        this.mseCanvas = document.getElementById(mseId);
-        this.decisionCanvas = document.getElementById(decisionId);
-        this.ctxMse = this.mseCanvas.getContext('2d');
-        this.ctxDecision = this.decisionCanvas.getContext('2d');
+    private mseCanvas: HTMLCanvasElement;
+    private decisionCanvas: HTMLCanvasElement;
+    private ctxMse: CanvasRenderingContext2D;
+    private ctxDecision: CanvasRenderingContext2D;
+
+    constructor(mseId: string, decisionId: string) {
+        this.mseCanvas = document.getElementById(mseId) as HTMLCanvasElement;
+        this.decisionCanvas = document.getElementById(decisionId) as HTMLCanvasElement;
+        
+        this.ctxMse = this.mseCanvas.getContext('2d')!;
+        this.ctxDecision = this.decisionCanvas.getContext('2d')!;
     }
 
-    drawLearningCurves(fixedHistory, adaptiveHistory) {
+    public drawLearningCurves(fixedHistory: number[], adaptiveHistory: number[]): void {
         const ctx = this.ctxMse;
         const { width: w, height: h } = this.mseCanvas;
         ctx.clearRect(0, 0, w, h);
@@ -14,7 +20,7 @@ class Visualizer {
         const maxLen = Math.max(fixedHistory.length, adaptiveHistory.length);
         const maxMse = Math.max(fixedHistory[1] || 1, adaptiveHistory[1] || 1);
 
-        const drawPath = (data, color, label, yOffset) => {
+        const drawPath = (data: number[], color: string, label: string, yOffset: number) => {
             ctx.beginPath();
             ctx.strokeStyle = color;
             ctx.lineWidth = 2;
@@ -33,7 +39,7 @@ class Visualizer {
         drawPath(adaptiveHistory, '#2ecc71', 'Adaptive', 40);
     }
 
-    drawBoundary(model, dataset) {
+    public drawBoundary(model: Perceptron, dataset: DataPoint[]): void {
         const ctx = this.ctxDecision;
         const { width: w, height: h } = this.decisionCanvas;
         const scale = 35;
@@ -62,7 +68,7 @@ class Visualizer {
         dataset.forEach(p => {
             ctx.fillStyle = p.label === 1 ? '#2ecc71' : '#e67e22';
             ctx.beginPath();
-            ctx.arc(center.x + p.x1 * scale, center.y - p.x2 * scale, 5, 0, Math.PI*2);
+            ctx.arc(center.x + p.x1 * scale, center.y - p.x2 * scale, 5, 0, Math.PI * 2);
             ctx.fill();
         });
     }
