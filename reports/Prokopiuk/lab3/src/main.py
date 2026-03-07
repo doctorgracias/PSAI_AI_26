@@ -166,7 +166,7 @@ test_p.w = initial_weights.copy()
 test_p.set_X(X_train)
 test_p.set_target(Y_targets)
 history = test_p.train(epochs=10000)
-plt.plot(history, label=f'MSE LR = {0.01}')
+plt.plot(history, label=f'MSE LR = {0.01}', color = 'blue')
 
 adapt_p = Perceptron(input_size=2)
 adapt_p.w = initial_weights.copy()
